@@ -125,39 +125,42 @@ def split_files_for_training(
 
         # Split per note density
         for ti, score_to_split in enumerate(scores):
-            score_chunks = split_score_per_note_density(
-                score_to_split,
-                max_seq_len,
-                average_num_tokens_per_note,
-                num_overlap_bars,
-                min_seq_len,
-            )
-
-            # Save them
-            for _i, chunk_to_save in enumerate(score_chunks):
-                # Skip it if there are no notes, this can happen with
-                # portions of tracks with no notes but tempo/signature
-                # changes happening later
-                if len(chunk_to_save.tracks) == 0 or chunk_to_save.note_num() == 0:
-                    continue
-                # Add a marker to indicate chunk number
-                chunk_to_save.markers.append(
-                    TextMeta(0, f"miditok: chunk {_i}/{len(score_chunks) - 1}")
+            try:
+                score_chunks = split_score_per_note_density(
+                    score_to_split,
+                    max_seq_len,
+                    average_num_tokens_per_note,
+                    num_overlap_bars,
+                    min_seq_len,
                 )
-                if tracks_separated:
-                    file_name = f"{file_path.stem}_t{ti}_{_i}{file_path.suffix}"
-                else:
-                    file_name = f"{file_path.stem}_{_i}{file_path.suffix}"
-                # use with_stem when dropping support for python 3.8
-                saving_path = (
-                    save_dir / file_path.relative_to(root_dir).parent / file_name
-                )
-                saving_path.parent.mkdir(parents=True, exist_ok=True)
-                if file_path.suffix in MIDI_FILES_EXTENSIONS:
-                    chunk_to_save.dump_midi(saving_path)
-                else:
-                    chunk_to_save.dump_abc(saving_path)
-                new_files_paths.append(saving_path)
+    
+                # Save them
+                for _i, chunk_to_save in enumerate(score_chunks):
+                    # Skip it if there are no notes, this can happen with
+                    # portions of tracks with no notes but tempo/signature
+                    # changes happening later
+                    if len(chunk_to_save.tracks) == 0 or chunk_to_save.note_num() == 0:
+                        continue
+                    # Add a marker to indicate chunk number
+                    chunk_to_save.markers.append(
+                        TextMeta(0, f"miditok: chunk {_i}/{len(score_chunks) - 1}")
+                    )
+                    if tracks_separated:
+                        file_name = f"{file_path.stem}_t{ti}_{_i}{file_path.suffix}"
+                    else:
+                        file_name = f"{file_path.stem}_{_i}{file_path.suffix}"
+                    # use with_stem when dropping support for python 3.8
+                    saving_path = (
+                        save_dir / file_path.relative_to(root_dir).parent / file_name
+                    )
+                    saving_path.parent.mkdir(parents=True, exist_ok=True)
+                    if file_path.suffix in MIDI_FILES_EXTENSIONS:
+                        chunk_to_save.dump_midi(saving_path)
+                    else:
+                        chunk_to_save.dump_abc(saving_path)
+                    new_files_paths.append(saving_path)
+            except Exception as e:
+                pass
 
     # Save file in save_dir to indicate file split has been performed
     with split_hidden_file_path.open("w") as f:
